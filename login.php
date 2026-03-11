@@ -1,40 +1,33 @@
 <?php
-// 1. Start the Session FIRST (Crucial for keeping users logged in)
+// 1. Start the Session FIRST
 session_start();
 include 'includes/db_connect.php';
 
 $error_message = "";
 
-// 2. Process the Login Form when submitted
+// 2. Process the Login Form
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $conn->real_escape_string($_POST['email']);
     $password = $_POST['password'];
 
-    // Search for the user by email
     $sql = "SELECT id, first_name, surname, password, role FROM users WHERE email = '$email'";
     $result = $conn->query($sql);
 
     if ($result->num_rows == 1) {
         $user = $result->fetch_assoc();
-        
-        // 3. Verify the hashed password
         if (password_verify($password, $user['password'])) {
-            
-            // Success! Create the Session variables
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['role'] = $user['role'];
             $_SESSION['name'] = $user['first_name'] . ' ' . $user['surname'];
 
-            // 4. Smart Redirect based on Role
             if ($user['role'] == 'Patient') {
                 header("Location: patient_dashboard.php");
             } elseif ($user['role'] == 'Doctor') {
-                header("Location: doctor_dashboard.php"); // We will build this next!
+                header("Location: doctor_dashboard.php");
             } else {
-                header("Location: index.php"); // Fallback for Admin (for now)
+                header("Location: index.php");
             }
             exit();
-            
         } else {
             $error_message = "Incorrect password. Please try again.";
         }
@@ -43,7 +36,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-// Include the header AFTER the PHP logic so redirects work properly
 include 'includes/header.php'; 
 ?>
 
@@ -70,13 +62,16 @@ include 'includes/header.php';
             <input type="password" name="password" required placeholder="Enter your password">
         </div>
 
-        <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Secure Login</button>
+        <div style="text-align: center; margin-top: 2rem;">
+            <button type="submit" class="btn btn-primary" style="min-width: 200px;">Login</button>
+        </div>
     </form>
 
-    <div style="text-align: center; margin-top: 2rem;">
-        <p style="color: #64748b;">Don't have an account?</p>
-        <a href="add.php" style="color: #2563eb; font-weight: 600; text-decoration: none;">Register as a Patient</a> | 
-        <a href="add_doctor.php" style="color: #2563eb; font-weight: 600; text-decoration: none;">Apply as a Doctor</a>
+    <div style="text-align: center; margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #f1f5f9;">
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 0.5rem;">Don't have an account?</p>
+        <a href="add.php" style="color: #2563eb; font-weight: 600; text-decoration: none; font-size: 0.9rem;">Register as a Patient</a>
+        <span style="color: #cbd5e1; margin: 0 10px;">|</span>
+        <a href="add_doctor.php" style="color: #2563eb; font-weight: 600; text-decoration: none; font-size: 0.9rem;">Apply as a Doctor</a>
     </div>
 </div>
 
