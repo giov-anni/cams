@@ -79,7 +79,22 @@
             <textarea name="bio" placeholder="Briefly describe your experience, qualifications, and previous practice..." required></textarea>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="background: #0f172a; box-shadow: 0 4px 14px 0 rgba(15, 23, 42, 0.39);">Submit Application</button>
+        <div style="display: flex; justify-content: center; margin-top: 2rem; padding-bottom: 1rem;">
+            <button type="submit" class="btn btn-primary" style="
+                background: #0f172a; 
+                box-shadow: 0 4px 14px 0 rgba(15, 23, 42, 0.39); 
+                padding: 1rem 4rem; 
+                border-radius: 12px; 
+                width: auto; 
+                cursor: pointer; 
+                border: none; 
+                color: white; 
+                font-weight: 600; 
+                transition: transform 0.2s ease;
+            ">
+                Submit Application
+            </button>
+        </div>
     </form>
 </div>
 

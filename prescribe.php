@@ -2,8 +2,9 @@
 session_start();
 include 'includes/db_connect.php';
 include 'includes/header.php';
+include 'includes/sms_helper.php'; // 1. Include the SMS helper
 
-// 1. SECURITY: Only Doctors can prescribe
+// 2. SECURITY: Only Doctors can prescribe
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Doctor') {
     header("Location: login.php");
     exit();
@@ -14,7 +15,7 @@ $doctor_id = $_SESSION['user_id'];
 $success_msg = false;
 $error_msg = "";
 
-// 2. FETCH APPOINTMENT & PATIENT DETAILS
+// 3. FETCH APPOINTMENT & PATIENT DETAILS
 $query = "SELECT a.*, u.first_name, u.surname, u.phone_number, s.name as specialty_name 
           FROM appointments a 
           JOIN users u ON a.patient_id = u.id 
@@ -29,7 +30,7 @@ if (!$appt) {
     exit();
 }
 
-// 3. PROCESS TREATMENT SUBMISSION
+// 4. PROCESS TREATMENT SUBMISSION
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['complete_session'])) {
     $prescriptions = $conn->real_escape_string($_POST['prescriptions']);
     $doctor_notes = $conn->real_escape_string($_POST['doctor_notes']);
@@ -65,6 +66,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['complete_session'])) {
                        WHERE id = '$appt_id'";
 
         if ($conn->query($update_sql)) {
+            
+            // 5. TRIGGER SMS NOTIFICATION TO PATIENT
+            $patientName = $appt['first_name'] . " " . $appt['surname'];
+            $doctorSurname = $_SESSION['surname']; // Assuming 'surname' is in the session
+            $patientPhone = $appt['phone_number'];
+            
+            $sms_msg = "Hello $patientName, your consultation at GB-CLINIC is now complete. Your digital prescription and lab reports are ready for download in your dashboard. - GB-CLINIC";
+            
+            // Send the text
+            sendGoldByteSMS($patientPhone, $sms_msg);
+
             $success_msg = true;
             header("refresh:2;url=doctor_dashboard.php");
         } else {
@@ -81,7 +93,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['complete_session'])) {
             <div style="background: #dcfce7; color: #166534; padding: 2.5rem; border-radius: 20px; text-align: center; border: 1px solid #bbf7d0; box-shadow: 0 10px 25px rgba(0,0,0,0.05);">
                 <div style="font-size: 3.5rem; margin-bottom: 1rem;">✅</div>
                 <h2 style="margin-bottom: 10px;">Consultation Finalized</h2>
-                <p>The prescription has been issued and medical documents have been uploaded.</p>
+                <p>The patient has been notified via SMS. Redirecting to dashboard...</p>
             </div>
         <?php else: ?>
 

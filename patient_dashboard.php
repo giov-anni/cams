@@ -10,14 +10,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Patient') {
 
 $patient_id = $_SESSION['user_id'];
 
-// 1. Fetch Profile with Image Fallback
+// 1. Fetch Profile Details
 $user_query = "SELECT * FROM users WHERE id = '$patient_id' AND role = 'Patient'";
 $user_result = $conn->query($user_query);
 $patient = $user_result->fetch_assoc();
-
-$profile_image = (!empty($patient['profile_pic']) && file_exists("uploads/profiles/".$patient['profile_pic'])) 
-                ? "uploads/profiles/".$patient['profile_pic'] 
-                : "https://ui-avatars.com/api/?name=".urlencode($patient['first_name']."+".$patient['surname'])."&background=2563eb&color=fff&size=128";
 
 // 2. Fetch Detailed Appointment History
 $appt_query = "SELECT a.*, s.name AS specialty_display 
@@ -39,16 +35,22 @@ while($stat = $temp_res->fetch_assoc()) {
 
 <div class="container" style="margin-top: 2rem;">
     <div style="background: #ffffff; padding: 2rem; border-radius: 24px; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 30px; margin-bottom: 2rem;">
-        <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 4px solid #f0f7ff; box-shadow: 0 8px 20px rgba(0,0,0,0.08);">
-            <img src="<?php echo $profile_image; ?>" alt="Profile" style="width:100%; height:100%; object-fit:cover;">
+        
+        <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 4px solid #f0f7ff; box-shadow: 0 8px 20px rgba(0,0,0,0.08); background: #f1f5f9; display: flex; align-items: center; justify-content: center;">
+            <?php if(!empty($patient['profile_pic']) && file_exists($patient['profile_pic'])): ?>
+                <img src="<?php echo $patient['profile_pic']; ?>" alt="Profile" style="width:100%; height:100%; object-fit:cover;">
+            <?php else: ?>
+                <div style="font-size: 3.5rem;">👤</div>
+            <?php endif; ?>
         </div>
+
         <div style="flex-grow: 1;">
             <span style="background: #eff6ff; color: #2563eb; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Verified Patient</span>
             <h2 style="color: #0f172a; font-size: 2rem; margin: 5px 0;">Welcome, <?php echo htmlspecialchars($patient['first_name']); ?>!</h2>
             <p style="color: #64748b; font-size: 0.95rem;">ID: #GB-P-<?php echo str_pad($patient['id'], 4, '0', STR_PAD_LEFT); ?> | <a href="update_profile.php" style="color: #2563eb; text-decoration: none; font-weight: 600;">Edit Profile Details &rarr;</a></p>
         </div>
         <div>
-            <a href="book.php" class="btn btn-primary" style="padding: 1rem 2rem; border-radius: 12px;">+ New Appointment</a>
+            <a href="book.php" class="btn btn-primary" style="padding: 1rem 2rem; border-radius: 12px; text-decoration: none; font-weight: 700;">+ New Appointment</a>
         </div>
     </div>
 

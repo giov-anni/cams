@@ -1,6 +1,7 @@
 <?php
-// 1. Connect to the database
+// 1. Connect to the database and SMS helper
 include 'includes/db_connect.php';
+include 'includes/sms_helper.php'; // Added SMS helper
 
 // 2. Check if the form was actually submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -25,7 +26,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $appointment_date = $_POST['appointment_date'];
     $service_type = $_POST['service_type'];
     
-    // 5. SECURE FEE CALCULATION (Backend logic for Winneba operations)
+    // Fetch specialty name for the SMS message
+    $spec_query = $conn->query("SELECT name FROM specialties WHERE id = '$specialty_id'");
+    $spec_data = $spec_query->fetch_assoc();
+    $specialty_name = $spec_data['name'] ?? "General Consultation";
+
+    // 5. SECURE FEE CALCULATION
     $total_fee = 100.00; // Base fee
     $home_address = NULL;
     
@@ -40,7 +46,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // 6. Start a Database Transaction 
-    // (If the appointment fails, we don't want a "ghost" user without an appointment)
     $conn->begin_transaction();
 
     try {
@@ -52,7 +57,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             throw new Exception("Error creating user account: " . $conn->error);
         }
 
-        // Get the ID of the user we just created!
         $new_patient_id = $conn->insert_id;
 
         // Step B: Insert the Appointment into the 'appointments' table
@@ -65,24 +69,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // Everything worked! Commit to the database.
         $conn->commit();
+
+        // 7. SEND SMS NOTIFICATION
+        $fullName = $first_name . " " . $surname;
+        $formatted_date = date("M j, Y @ g:i A", strtotime($appointment_date));
+        
+        $sms_msg = "Hello $fullName, welcome to GoldByte CAMS! Your account is active and your appointment for $specialty_name on $formatted_date is PENDING approval. - GB-CLINIC";
+        
+        if ($is_emergency == 1) {
+            $sms_msg = "🚨 EMERGENCY ALERT: Hello $fullName, your URGENT request for $specialty_name has been received. Please arrive at the clinic immediately. - GB-CLINIC";
+        }
+
+        sendGoldByteSMS($phone, $sms_msg);
         
         // Success Message & Redirect
         echo "<div style='text-align:center; margin-top:50px; font-family:sans-serif;'>";
         echo "<h2>🎉 Success! Welcome to GoldByte CAMS!</h2>";
-        echo "<p>Your appointment has been booked. Your total fee is <strong>$total_fee GH₵</strong>.</p>";
-        echo "<p><a href='view.php' style='color:#2563eb; text-decoration:none;'>Click here to view your appointments</a></p>";
+        echo "<p>An SMS confirmation has been sent to <strong>$phone</strong>.</p>";
+        echo "<p>Your total fee is <strong>$total_fee GH₵</strong>.</p>";
+        echo "<p><a href='login.php' style='color:#2563eb; text-decoration:none; font-weight:bold;'>Click here to Login & View Dashboard</a></p>";
         echo "</div>";
 
     } catch (Exception $e) {
-        // Something failed! Roll back the database so no partial data is saved.
         $conn->rollback();
         echo "Transaction failed: " . $e->getMessage();
     }
     
-    // Close the connection
     $conn->close();
 } else {
-    // If someone tries to access this file directly without clicking submit
     header("Location: add.php");
     exit();
 }

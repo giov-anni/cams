@@ -11,37 +11,47 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Doctor') {
 
 $doctor_user_id = $_SESSION['user_id'];
 
-// 2. FETCH DOCTOR'S DETAILS
-$doc_info_query = "SELECT d.*, s.name as specialty_name 
+// 2. SEARCH LOGIC
+$search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
+$search_query = "";
+if (!empty($search)) {
+    $search_query = " AND (u.first_name LIKE '%$search%' OR u.surname LIKE '%$search%' OR u.phone_number LIKE '%$search%')";
+}
+
+// 3. FETCH DOCTOR'S DETAILS (Including Profile Picture)
+$doc_info_query = "SELECT d.*, s.name as specialty_name, u.profile_pic, u.first_name 
                    FROM doctors d 
+                   JOIN users u ON d.user_id = u.id
                    JOIN specialties s ON d.specialty_id = s.id 
                    WHERE d.user_id = '$doctor_user_id'";
 $doc_info_result = $conn->query($doc_info_query);
 $doctor_data = $doc_info_result->fetch_assoc();
 $my_specialty_id = $doctor_data['specialty_id'];
 
-// 3. FETCH APPOINTMENTS (Including home_address)
+// 4. FETCH APPOINTMENTS (Filtered by Specialty & Search)
 $appt_query = "SELECT a.*, u.first_name, u.surname, u.phone_number 
                FROM appointments a 
                JOIN users u ON a.patient_id = u.id 
-               WHERE a.specialty_id = '$my_specialty_id' 
+               WHERE a.specialty_id = '$my_specialty_id' $search_query
                ORDER BY a.is_emergency DESC, a.appointment_date ASC";
 $appt_result = $conn->query($appt_query);
 
-// 4. STATS CALCULATION
-$pending_count = 0;
-$emergency_count = 0;
-$temp_res = $conn->query("SELECT is_emergency, status FROM appointments WHERE specialty_id = '$my_specialty_id'");
-while($stat = $temp_res->fetch_assoc()) {
-    if($stat['status'] == 'Pending') $pending_count++;
-    if($stat['is_emergency'] == 1 && $stat['status'] == 'Pending') $emergency_count++;
-}
+// 5. STATS CALCULATION
+$pending_count = $conn->query("SELECT COUNT(*) as count FROM appointments WHERE specialty_id = '$my_specialty_id' AND status = 'Pending'")->fetch_assoc()['count'];
+$emergency_count = $conn->query("SELECT COUNT(*) as count FROM appointments WHERE specialty_id = '$my_specialty_id' AND status = 'Pending' AND is_emergency = 1")->fetch_assoc()['count'];
 ?>
 
 <div class="container" style="margin-top: 2rem;">
     <div style="background: #ffffff; padding: 2rem; border-radius: 24px; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 30px; margin-bottom: 2rem;">
-        <div style="width: 100px; height: 100px; border-radius: 20px; background: #eff6ff; display: flex; align-items: center; justify-content: center; font-size: 3rem;">
-            👨‍⚕️
+        <div style="position: relative;">
+            <?php if (!empty($doctor_data['profile_pic']) && file_exists($doctor_data['profile_pic'])): ?>
+                <img src="<?php echo $doctor_data['profile_pic']; ?>" 
+                     style="width: 100px; height: 100px; border-radius: 20px; object-fit: cover; background: #eff6ff; border: 2px solid #e2e8f0;">
+            <?php else: ?>
+                <div style="width: 100px; height: 100px; border-radius: 20px; background: #2563eb; color: white; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; border: 2px solid #e2e8f0; box-shadow: inset 0 0 20px rgba(0,0,0,0.1);">
+                    <?php echo strtoupper($doctor_data['first_name'][0]); ?>
+                </div>
+            <?php endif; ?>
         </div>
         <div style="flex-grow: 1;">
             <span style="background: #f0fdf4; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Verified Practitioner</span>
@@ -52,24 +62,29 @@ while($stat = $temp_res->fetch_assoc()) {
             </p>
         </div>
         <div style="text-align: right;">
-            <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 5px;">Clinical Status</p>
-            <span style="background: #10b981; color: white; padding: 8px 16px; border-radius: 12px; font-weight: 700; font-size: 0.9rem;">● ON DUTY</span>
+            <a href="doctor_profile.php" class="btn" style="background: #f1f5f9; color: #475569; padding: 10px 20px; border-radius: 12px; font-weight: 600; text-decoration: none; font-size: 0.85rem; border: 1px solid #e2e8f0;">
+                ⚙️ Manage Profile
+            </a>
+            <p style="margin-top: 10px; color: #10b981; font-weight: 700; font-size: 0.8rem;">● ON DUTY</p>
         </div>
     </div>
 
-    <div class="service-grid" style="margin-bottom: 3rem;">
-        <div class="service-card" style="text-align: left; padding: 1.5rem; background: #ffffff; border-left: 5px solid #2563eb;">
-            <h4 style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Pending Consultation</h4>
-            <p style="font-size: 2.2rem; font-weight: 800; color: #0f172a; margin: 10px 0;"><?php echo $pending_count; ?></p>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 20px;">
+        <div style="display: flex; gap: 15px;">
+            <div style="background: white; padding: 12px 20px; border-radius: 15px; border-left: 5px solid #2563eb; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Queue</span>
+                <span style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin-left: 10px;"><?php echo $pending_count; ?></span>
+            </div>
+            <div style="background: white; padding: 12px 20px; border-radius: 15px; border-left: 5px solid #ef4444; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Urgent</span>
+                <span style="font-size: 1.2rem; font-weight: 800; color: #ef4444; margin-left: 10px;"><?php echo $emergency_count; ?></span>
+            </div>
         </div>
-        <div class="service-card" style="text-align: left; padding: 1.5rem; background: #ffffff; border-left: 5px solid #ef4444;">
-            <h4 style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Urgent Emergencies</h4>
-            <p style="font-size: 2.2rem; font-weight: 800; color: #ef4444; margin: 10px 0;"><?php echo $emergency_count; ?></p>
-        </div>
-        <div class="service-card" style="text-align: left; padding: 1.5rem; background: #ffffff; border-left: 5px solid #10b981;">
-            <h4 style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Department</h4>
-            <p style="font-size: 1.2rem; font-weight: 700; color: #0f172a; margin: 10px 0;"><?php echo htmlspecialchars($doctor_data['specialty_name']); ?></p>
-        </div>
+
+        <form method="GET" style="display: flex; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 5px 10px; width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+            <input type="text" name="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Search patient name or phone..." style="border: none; background: transparent; padding: 8px; outline: none; font-size: 0.85rem; width: 100%;">
+            <button type="submit" style="background: #0f172a; color: white; border: none; border-radius: 8px; padding: 5px 15px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">Search</button>
+        </form>
     </div>
 
     <div style="background: white; border-radius: 24px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; overflow-x: auto;">
@@ -132,7 +147,12 @@ while($stat = $temp_res->fetch_assoc()) {
             </table>
         <?php else: ?>
             <div style="text-align: center; padding: 4rem;">
-                <p style="color: #94a3b8; font-size: 1.1rem;">No patients in your queue today.</p>
+                <p style="color: #94a3b8; font-size: 1.1rem;">
+                    <?php echo !empty($search) ? "No patients found matching '$search'." : "No patients in your queue today."; ?>
+                </p>
+                <?php if(!empty($search)): ?>
+                    <a href="doctor_dashboard.php" style="color: #2563eb; font-size: 0.9rem; text-decoration: none; font-weight: 600;">Clear Filter</a>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
     </div>

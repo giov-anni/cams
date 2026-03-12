@@ -1,6 +1,7 @@
 <?php
-// 1. Connect to the database
+// 1. Connect to the database and SMS helper
 include 'includes/db_connect.php';
+include 'includes/sms_helper.php'; // Added SMS helper
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
@@ -32,26 +33,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $file_type = $_FILES["cv_file"]["type"];
         $file_size = $_FILES["cv_file"]["size"];
     
-        // Verify file extension
         $ext = pathinfo($file_name, PATHINFO_EXTENSION);
         if (!array_key_exists(strtolower($ext), $allowed_ext)) {
             die("Error: Please select a valid PDF file format.");
         }
     
-        // Verify file size - 5MB maximum
         $maxsize = 5 * 1024 * 1024;
         if ($file_size > $maxsize) {
             die("Error: File size is larger than the allowed limit (5MB).");
         }
     
-        // Create a unique file name so two doctors named John don't overwrite each other's CVs
         $new_file_name = uniqid() . "_" . basename($file_name);
         $upload_dir = "uploads/cvs/";
         
-        // Final path to save in the database
         $cv_path = $upload_dir . $new_file_name;
         
-        // Move the file from the temporary server space to your specific folder
         if (!move_uploaded_file($_FILES["cv_file"]["tmp_name"], $cv_path)) {
             die("Error: There was a problem uploading your CV. Please make sure the 'uploads/cvs/' folder exists.");
         }
@@ -63,9 +59,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $conn->begin_transaction();
 
     try {
-        // Step A: Insert the Doctor into the 'users' table with the 'Doctor' role
-        $sql_user = "INSERT INTO users (first_name, surname, email, password, gender, phone_number, role) 
-                     VALUES ('$first_name', '$surname', '$email', '$password_hashed', '$gender', '$phone', 'Doctor')";
+        // Step A: Insert into 'users' table 
+        // NOTE: status is explicitly set to 'Pending'
+        $sql_user = "INSERT INTO users (first_name, surname, email, password, gender, phone_number, role, status) 
+                     VALUES ('$first_name', '$surname', '$email', '$password_hashed', '$gender', '$phone', 'Doctor', 'Pending')";
         
         if (!$conn->query($sql_user)) {
             throw new Exception("Error creating user account: " . $conn->error);
@@ -74,7 +71,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Get the ID of the user we just created
         $new_doctor_user_id = $conn->insert_id;
 
-        // Step B: Insert the Professional details into the 'doctors' table
+        // Step B: Insert professional details into 'doctors' table
         $sql_doc = "INSERT INTO doctors (user_id, specialty_id, license_number, cv_path, bio) 
                     VALUES ('$new_doctor_user_id', '$specialty_id', '$license_number', '$cv_path', '$bio')";
         
@@ -82,27 +79,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             throw new Exception("Error saving professional details: " . $conn->error);
         }
 
-        // Everything worked! Commit to the database.
+        // Everything worked!
         $conn->commit();
+
+        // 6. SEND SMS NOTIFICATION
+        $fullName = $first_name . " " . $surname;
+        $sms_msg = "Hello Dr. $fullName, thank you for joining GoldByte CAMS. Your license ($license_number) is currently under review by our Admin team. We will notify you once verified. - GB-CLINIC";
         
-        // Success Message & Redirect
-        echo "<div style='text-align:center; margin-top:50px; font-family:sans-serif;'>";
-        echo "<h2>👨‍⚕️ Application Received!</h2>";
-        echo "<p>Thank you for applying to join the GoldByte CAMS medical network in Winneba.</p>";
-        echo "<p>Your CV has been successfully securely uploaded. Our administration team will review your MDC License ($license_number) shortly.</p>";
-        echo "<p><a href='index.php' style='color:#2563eb; text-decoration:none;'>Return to Home Page</a></p>";
+        sendGoldByteSMS($phone, $sms_msg);
+        
+        // Success Message (Custom Styled)
+        echo "<div style='text-align:center; margin-top:100px; font-family: sans-serif; padding: 20px;'>";
+        echo "<div style='font-size: 5rem; margin-bottom: 20px;'>⏳</div>";
+        echo "<h2 style='color: #0f172a;'>Application Submitted Successfully!</h2>";
+        echo "<p style='color: #64748b; font-size: 1.1rem; max-width: 600px; margin: 20px auto; line-height: 1.6;'>";
+        echo "Thank you, Dr. $surname. Your credentials and medical license ($license_number) are now being reviewed by the GoldByte Administration team. ";
+        echo "An SMS confirmation has been sent to <strong>$phone</strong>. You will be able to log in once your account has been verified.";
+        echo "</p>";
+        echo "<a href='index.php' style='display: inline-block; background: #0f172a; color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600;'>Return to Homepage</a>";
         echo "</div>";
 
     } catch (Exception $e) {
-        // Something failed! Roll back the database.
         $conn->rollback();
         echo "Transaction failed: " . $e->getMessage();
     }
     
-    // Close the connection
     $conn->close();
 } else {
-    // If someone tries to access this file directly without clicking submit
     header("Location: add_doctor.php");
     exit();
 }
