@@ -5,6 +5,7 @@
  */
 if (!function_exists('getEnvValue')) {
     function getEnvValue($key) {
+        // Path logic to find .env relative to the 'includes' folder
         $path = __DIR__ . '/../.env';
         
         if (!file_exists($path)) {
@@ -13,6 +14,7 @@ if (!function_exists('getEnvValue')) {
 
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
+            // Skip comments
             if (strpos(trim($line), '#') === 0) continue;
 
             $parts = explode('=', $line, 2);
@@ -32,14 +34,16 @@ if (!function_exists('getEnvValue')) {
 /**
  * GoldByte CAMS Central SMS Hub
  * Handles all outgoing notifications via Arkesel API
- * Sender ID: GB-CLINIC
+ * * @param string $recipient The phone number
+ * @param string $message The text content
+ * @param string $senderId Custom Sender ID (Default: GB-CLINIC)
  */
-function sendGoldByteSMS($recipient, $message) {
+function sendGoldByteSMS($recipient, $message, $senderId = "GB-CLINIC") {
     // 1. FETCH API KEY FROM .ENV FILE
     $apiKey = getEnvValue('ARKESEL_API_KEY');
     
-    // UPDATED SENDER ID
-    $senderId = "GB-CLINIC"; 
+    // Arkesel Sender IDs must be exactly 11 characters or less
+    $senderId = substr(trim($senderId), 0, 11);
 
     if (!$apiKey) {
         error_log("SMS Error: ARKESEL_API_KEY is missing in .env");
@@ -47,13 +51,12 @@ function sendGoldByteSMS($recipient, $message) {
     }
 
     // 2. FORMAT THE NUMBER (Ghana Standard 233)
-    // Removes any spaces or dashes first
-    $recipient = str_replace([' ', '-'], '', $recipient);
+    // Strips spaces, dashes, and plus signs
+    $recipient = str_replace([' ', '-', '+'], '', $recipient);
     
+    // Converts local 0 format to international 233
     if (substr($recipient, 0, 1) == '0') {
         $recipient = '233' . substr($recipient, 1);
-    } elseif (substr($recipient, 0, 1) == '+') {
-        $recipient = substr($recipient, 1);
     }
 
     // 3. PREPARE THE API URL
@@ -63,9 +66,18 @@ function sendGoldByteSMS($recipient, $message) {
          . "&from=" . urlencode($senderId)
          . "&sms=" . urlencode($message);
 
-    // 4. TRIGGER THE REQUEST
-    // Note: ensure 'allow_url_fopen' is ON in your XAMPP/PHP settings
-    $response = @file_get_contents($url);
+    // 4. TRIGGER THE REQUEST WITH 5-SECOND TIMEOUT
+    $options = [
+        "http" => [
+            "method" => "GET",
+            "timeout" => 5, // Prevents system hanging during bulk blasts
+            "ignore_errors" => true
+        ]
+    ];
+    $context = stream_context_create($options);
+    
+    // Send the request safely
+    $response = @file_get_contents($url, false, $context);
     
     return $response; 
 }

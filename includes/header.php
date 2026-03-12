@@ -24,13 +24,20 @@ if (session_status() === PHP_SESSION_NONE) {
             <li><a href="index.php">Home</a></li>
             
             <?php if (isset($_SESSION['user_id'])): ?>
+                
                 <?php if ($_SESSION['role'] === 'Patient'): ?>
                     <li><a href="patient_dashboard.php">My Appointments</a></li>
+                
                 <?php elseif ($_SESSION['role'] === 'Doctor'): ?>
                     <li><a href="doctor_dashboard.php">Staff Dashboard</a></li>
+                
+                <?php elseif ($_SESSION['role'] === 'Admin'): ?>
+                    <li><a href="admin_dashboard.php">Management</a></li>
+                    <li><a href="bulk_sms.php" style="color: #2563eb; font-weight: 600;">🚀 SMS Marketing</a></li>
                 <?php endif; ?>
                 
                 <li><a href="logout.php" style="color: #ef4444; font-weight: 600;">Logout</a></li>
+
             <?php else: ?>
                 <li><a href="add.php">Book Appointment</a></li>
                 <li><a href="add_doctor.php">Join as Doctor</a></li>

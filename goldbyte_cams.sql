@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 12, 2026 at 10:51 AM
+-- Generation Time: Mar 12, 2026 at 10:19 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -86,7 +86,7 @@ CREATE TABLE `users` (
   `gender` enum('Male','Female','Other') NOT NULL,
   `phone_number` varchar(20) NOT NULL,
   `role` enum('Admin','Doctor','Patient') DEFAULT 'Patient',
-  `status` enum('Active','Suspended') DEFAULT 'Active',
+  `status` enum('Active','Suspended','Pending') DEFAULT 'Pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `profile_pic` varchar(255) DEFAULT 'default_user.png'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

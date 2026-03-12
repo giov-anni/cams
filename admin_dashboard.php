@@ -73,7 +73,7 @@ $total_revenue = $conn->query("SELECT SUM(total_fee) as total FROM appointments 
     <div style="background: white; border-radius: 24px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #f1f5f9;">
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 20px;">
-            <h3 style="color: #0f172a; margin: 0;">User Management</h3>
+            <h3 style="color: #0f172a; margin: 0;">Clinical User Management</h3>
             
             <div style="display: flex; gap: 15px; align-items: center;">
                 <form method="GET" style="display: flex; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 5px 10px;">
@@ -103,7 +103,6 @@ $total_revenue = $conn->query("SELECT SUM(total_fee) as total FROM appointments 
                         <tr style="border-bottom: 1px solid #f8fafc;">
                             <td style="padding: 1.2rem 1rem;">
                                 <div style="display: flex; align-items: center; gap: 15px;">
-                                    
                                     <div style="width: 45px; height: 45px; border-radius: 12px; background: <?php echo ($tab == 'doctors') ? '#eff6ff' : '#f1f5f9'; ?>; display: flex; align-items: center; justify-content: center; overflow: hidden; font-weight: 800; color: #2563eb; border: 1px solid #e2e8f0;">
                                         <?php if(!empty($row['profile_pic']) && file_exists($row['profile_pic'])): ?>
                                             <img src="<?php echo $row['profile_pic']; ?>" style="width: 100%; height: 100%; object-fit: cover;">
@@ -111,7 +110,6 @@ $total_revenue = $conn->query("SELECT SUM(total_fee) as total FROM appointments 
                                             <span style="font-size: 0.9rem;"><?php echo strtoupper($row['first_name'][0]); ?></span>
                                         <?php endif; ?>
                                     </div>
-
                                     <div>
                                         <div style="font-weight: 700; color: #0f172a;"><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['surname']); ?></div>
                                         <div style="color: #64748b; font-size: 0.8rem;"><?php echo $row['email']; ?></div>
@@ -144,6 +142,7 @@ $total_revenue = $conn->query("SELECT SUM(total_fee) as total FROM appointments 
                                 <div style="display: flex; gap: 12px; justify-content: center; align-items: center; font-size: 0.75rem; font-weight: 800;">
                                     <a href="edit_user.php?id=<?php echo $row['id']; ?>" style="color: #2563eb; text-decoration: none;">EDIT</a>
                                     <span style="color: #e2e8f0;">|</span>
+                                    
                                     <a href="toggle_status.php?id=<?php echo $row['id']; ?>&current=<?php echo $row['status']; ?>&tab=<?php echo $tab; ?>" 
                                        style="text-decoration: none; color: <?php echo ($row['status'] == 'Active') ? '#ef4444' : '#10b981'; ?>;">
                                        <?php 
@@ -151,6 +150,7 @@ $total_revenue = $conn->query("SELECT SUM(total_fee) as total FROM appointments 
                                             else echo ($row['status'] == 'Active') ? "SUSPEND" : "ACTIVATE";
                                        ?>
                                     </a>
+                                    
                                     <span style="color: #e2e8f0;">|</span>
                                     <a href="delete_user.php?id=<?php echo $row['id']; ?>&tab=<?php echo $tab; ?>" 
                                        onclick="return confirm('🚨 DANGER: Permanently delete user?')" 
@@ -162,7 +162,7 @@ $total_revenue = $conn->query("SELECT SUM(total_fee) as total FROM appointments 
                 <?php else: ?>
                     <tr>
                         <td colspan="4" style="text-align: center; padding: 4rem; color: #94a3b8;">
-                            No users found matching your search.
+                            No clinical users found matching your search.
                         </td>
                     </tr>
                 <?php endif; ?>
@@ -173,9 +173,9 @@ $total_revenue = $conn->query("SELECT SUM(total_fee) as total FROM appointments 
 
 <div id="bioModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
     <div style="background:white; padding:2.5rem; border-radius:24px; max-width:550px; width:90%; position:relative; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
-        <h4 id="bioName" style="margin-top:0; color:#0f172a; font-size: 1.2rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">Doctor Bio</h4>
+        <h4 id="bioName" style="margin-top:0; color:#0f172a; font-size: 1.2rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">Doctor Profile</h4>
         <p id="bioText" style="color:#475569; font-size:0.95rem; line-height:1.7; white-space:pre-wrap; margin: 20px 0; max-height: 300px; overflow-y: auto;"></p>
-        <button onclick="closeBio()" style="width:100%; background:#0f172a; color:white; border:none; padding:12px; border-radius:12px; cursor:pointer; font-weight: 700;">Close Preview</button>
+        <button onclick="closeBio()" style="width:100%; background:#0f172a; color:white; border:none; padding:12px; border-radius:12px; cursor:pointer; font-weight: 700;">Close View</button>
     </div>
 </div>
 
@@ -190,9 +190,7 @@ function closeBio() {
 }
 window.onclick = function(event) {
     let modal = document.getElementById('bioModal');
-    if (event.target == modal) {
-        closeBio();
-    }
+    if (event.target == modal) { closeBio(); }
 }
 </script>
 

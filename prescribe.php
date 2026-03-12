@@ -1,8 +1,10 @@
 <?php
 session_start();
-include 'includes/db_connect.php';
-include 'includes/header.php';
-include 'includes/sms_helper.php'; // 1. Include the SMS helper
+// 1. Force Absolute Paths for reliability in XAMPP
+$base_path = __DIR__ . DIRECTORY_SEPARATOR;
+include $base_path . 'includes/db_connect.php';
+include $base_path . 'includes/header.php';
+include $base_path . 'includes/sms_helper.php'; 
 
 // 2. SECURITY: Only Doctors can prescribe
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Doctor') {
@@ -16,6 +18,7 @@ $success_msg = false;
 $error_msg = "";
 
 // 3. FETCH APPOINTMENT & PATIENT DETAILS
+// We explicitly JOIN the users table to get the phone_number
 $query = "SELECT a.*, u.first_name, u.surname, u.phone_number, s.name as specialty_name 
           FROM appointments a 
           JOIN users u ON a.patient_id = u.id 
@@ -26,7 +29,7 @@ $appt = $res->fetch_assoc();
 
 if (!$appt) {
     echo "<div class='container'><p>Appointment record not found.</p></div>";
-    include 'includes/footer.php';
+    include $base_path . 'includes/footer.php';
     exit();
 }
 
@@ -34,7 +37,7 @@ if (!$appt) {
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['complete_session'])) {
     $prescriptions = $conn->real_escape_string($_POST['prescriptions']);
     $doctor_notes = $conn->real_escape_string($_POST['doctor_notes']);
-    $medical_file_name = $appt['medical_file']; // Keep old file if new one isn't uploaded
+    $medical_file_name = $appt['medical_file']; 
 
     // Handle File Upload
     if (!empty($_FILES['lab_report']['name'])) {
@@ -43,7 +46,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['complete_session'])) {
         $new_filename = uniqid() . "_lab_" . $appt_id . "." . $file_ext;
         $target_file = $target_dir . $new_filename;
 
-        // Validate file type (PDF, JPG, PNG)
         $allowed = array('pdf', 'jpg', 'jpeg', 'png');
         if (in_array($file_ext, $allowed)) {
             if (move_uploaded_file($_FILES["lab_report"]["tmp_name"], $target_file)) {
@@ -57,7 +59,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['complete_session'])) {
     }
 
     if (empty($error_msg)) {
-        // Update the record: Save RX, internal notes, and the filename
+        // Update the record to 'Completed'
         $update_sql = "UPDATE appointments SET 
                        prescriptions = '$prescriptions', 
                        doctor_notes = '$doctor_notes', 
@@ -69,12 +71,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['complete_session'])) {
             
             // 5. TRIGGER SMS NOTIFICATION TO PATIENT
             $patientName = $appt['first_name'] . " " . $appt['surname'];
-            $doctorSurname = $_SESSION['surname']; // Assuming 'surname' is in the session
-            $patientPhone = $appt['phone_number'];
+            $patientPhone = $appt['phone_number']; // Pulled via the JOIN above
             
             $sms_msg = "Hello $patientName, your consultation at GB-CLINIC is now complete. Your digital prescription and lab reports are ready for download in your dashboard. - GB-CLINIC";
             
-            // Send the text
+            // Send the text (The helper now handles the 5-second timeout)
             sendGoldByteSMS($patientPhone, $sms_msg);
 
             $success_msg = true;
@@ -160,4 +161,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['complete_session'])) {
     </div>
 </div>
 
-<?php include 'includes/footer.php'; ?>
+<?php include $base_path . 'includes/footer.php'; ?>
