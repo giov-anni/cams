@@ -56,17 +56,14 @@ while($stat = $temp_res->fetch_assoc()) {
         <div class="service-card" style="text-align: left; padding: 1.5rem; background: #ffffff; border: 1px solid #f1f5f9;">
             <h4 style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Lifetime Visits</h4>
             <p style="font-size: 2.2rem; font-weight: 800; color: #0f172a; margin: 10px 0;"><?php echo $appt_result->num_rows; ?></p>
-            <div style="height: 4px; background: #e2e8f0; border-radius: 2px;"><div style="width: 100%; height: 100%; background: #2563eb; border-radius: 2px;"></div></div>
         </div>
         <div class="service-card" style="text-align: left; padding: 1.5rem; background: #ffffff; border: 1px solid #f1f5f9;">
             <h4 style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Sessions Completed</h4>
             <p style="font-size: 2.2rem; font-weight: 800; color: #0f172a; margin: 10px 0;"><?php echo $completed_count; ?></p>
-            <div style="height: 4px; background: #e2e8f0; border-radius: 2px;"><div style="width: 100%; height: 100%; background: #10b981; border-radius: 2px;"></div></div>
         </div>
         <div class="service-card" style="text-align: left; padding: 1.5rem; background: #ffffff; border: 1px solid #f1f5f9;">
             <h4 style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Active Requests</h4>
             <p style="font-size: 2.2rem; font-weight: 800; color: #0f172a; margin: 10px 0;"><?php echo $pending_count; ?></p>
-            <div style="height: 4px; background: #e2e8f0; border-radius: 2px;"><div style="width: 70%; height: 100%; background: #f59e0b; border-radius: 2px;"></div></div>
         </div>
     </div>
 
@@ -81,9 +78,9 @@ while($stat = $temp_res->fetch_assoc()) {
                 <thead>
                     <tr style="color: #64748b; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">
                         <th style="padding: 1rem;">Schedule</th>
-                        <th style="padding: 1rem;">Department</th>
+                        <th style="padding: 1rem;">Service & Location</th>
                         <th style="padding: 1rem;">Status</th>
-                        <th style="padding: 1rem;">Medical Files</th>
+                        <th style="padding: 1rem;">Medical Documents</th>
                         <th style="padding: 1rem; text-align: center;">Actions</th>
                     </tr>
                 </thead>
@@ -95,21 +92,39 @@ while($stat = $temp_res->fetch_assoc()) {
                                 <div style="color: #64748b; font-size: 0.85rem;"><?php echo date("g:i A", strtotime($row['appointment_date'])); ?></div>
                                 <?php if ($row['is_emergency']): ?><span style="color: #ef4444; font-size: 0.65rem; font-weight: 900;">🚨 URGENT</span><?php endif; ?>
                             </td>
+                            
                             <td style="padding: 1.5rem 1rem;">
-                                <span style="background: #eff6ff; color: #2563eb; padding: 6px 14px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; border: 1px solid #dbeafe;">
+                                <div style="background: #eff6ff; color: #2563eb; padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; display: inline-block; margin-bottom: 5px; border: 1px solid #dbeafe;">
                                     <?php echo htmlspecialchars($row['specialty_display'] ?? 'General'); ?>
-                                </span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: #475569;">
+                                    Type: <strong><?php echo $row['service_type']; ?></strong>
+                                    <?php if($row['service_type'] == 'Home-Service' && !empty($row['home_address'])): ?>
+                                        <br><span style="color: #0369a1; font-style: italic;">📍 <?php echo htmlspecialchars($row['home_address']); ?></span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
+
                             <td style="padding: 1.5rem 1rem;">
                                 <span style="font-size: 0.85rem; font-weight: 600; color: <?php echo ($row['status'] == 'Pending') ? '#f59e0b' : '#10b981'; ?>;">
                                     <?php echo htmlspecialchars($row['status']); ?>
                                 </span>
                             </td>
                             <td style="padding: 1.5rem 1rem;">
-                                <?php if($row['medical_file']): ?>
-                                    <a href="uploads/medical/<?php echo $row['medical_file']; ?>" target="_blank" style="color: #2563eb; font-weight: 600; font-size: 0.85rem; text-decoration: none;">View Lab Report</a>
+                                <?php if($row['status'] == 'Completed'): ?>
+                                    <a href="download_prescription.php?id=<?php echo $row['id']; ?>" style="color: #10b981; font-weight: 700; font-size: 0.85rem; text-decoration: none; display: flex; align-items: center; gap: 5px;">
+                                        📥 Download Prescription
+                                    </a>
                                 <?php else: ?>
-                                    <span style="color: #cbd5e1; font-size: 0.85rem;">None</span>
+                                    <a href="download_booking.php?id=<?php echo $row['id']; ?>" style="color: #2563eb; font-weight: 600; font-size: 0.85rem; text-decoration: none; display: flex; align-items: center; gap: 5px;">
+                                        📄 Booking Slip
+                                    </a>
+                                <?php endif; ?>
+                                
+                                <?php if($row['medical_file']): ?>
+                                    <div style="margin-top: 5px;">
+                                        <a href="uploads/medical/<?php echo $row['medical_file']; ?>" target="_blank" style="color: #64748b; font-size: 0.75rem; text-decoration: underline;">🔬 View Lab Report</a>
+                                    </div>
                                 <?php endif; ?>
                             </td>
                             <td style="padding: 1.5rem 1rem; text-align: center;">

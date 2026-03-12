@@ -1,0 +1,4 @@
+/vendor/
+/uploads/
+.env
+composer.lock
